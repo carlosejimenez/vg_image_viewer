@@ -15,6 +15,7 @@ def draw_rectangle(img: np.ndarray,
                    is_opaque: bool = False,
                    alpha: float = 0.5) -> np.ndarray:
     r"""Draws the rectangle around the object.
+    Code modified from https://github.com/shoumikchow/bbox-visualizer
 
     Args:
         img: the actual image.
@@ -51,6 +52,7 @@ def add_label(img,
               text_color=(0, 0, 0),
               top=True) -> np.ndarray:
     r"""Adds label, inside or outside the rectangle.
+    Code modified from https://github.com/shoumikchow/bbox-visualizer
 
     Args:
         img: the image on which the label is to be written, preferably the image with the rectangular bounding box
@@ -100,6 +102,7 @@ def add_multiple_labels(img: np.ndarray,
                         alpha: float = 0.1,
                         top: bool = True) -> np.ndarray:
     r"""Add labels, inside or outside the rectangles.
+    Code modified from https://github.com/shoumikchow/bbox-visualizer
 
     Args:
         img: the image on which the labels are to be written, preferably the image with the rectangular bounding boxes
