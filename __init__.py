@@ -132,7 +132,7 @@ def add_multiple_labels(img: np.ndarray,
     return img
 
 
-class NotebookImgViewer:
+class NotebookImageViewer:
     r"""Can be used to display images (using an id as filename from supplied the root directory) in jupyter notebooks
      and lab.
 
@@ -170,17 +170,17 @@ class NotebookImgViewer:
             with_bboxes: if scene_graphs contains value, will generate image with bounding boxes.
         """
         img_filename = Path(self.root.as_posix(), str(value) + ext).as_posix()
-        im = Image.open(img_filename)
+        img = Image.open(img_filename)
         init_scale = 600
-        ratio = init_scale / max(im.size[0], im.size[1])
-        im = im.resize([round(im.size[0] * ratio), round(im.size[1] * ratio)])
+        ratio = init_scale / max(img.size[0], img.size[1])
+        img = img.resize([round(img.size[0] * ratio), round(img.size[1] * ratio)])
         if with_bboxes:
             objects = self.scene_graphs[str(value)]['objects'].values()
             labels, bboxes = zip(*list(map(lambda x: self._extract_label_and_bbox(x, ratio), objects)))
-            im = cv2.cvtColor(np.array(im), cv2.COLOR_RGB2BGR)
-            im = add_multiple_labels(im, labels, bboxes, draw_bg=True, text_bg_color=(255, 255, 255), thickness=2,
+            img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+            img = add_multiple_labels(img, labels, bboxes, draw_bg=True, text_bg_color=(255, 255, 255), thickness=2,
                                      is_opaque=False, alpha=0.1, top=False)
-            im = Image.fromarray(cv2.cvtColor(im, cv2.COLOR_RGB2BGR))
+            img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
         ratio = self.default_dim / init_scale
-        im = im.resize([round(im.size[0] * ratio), round(im.size[1] * ratio)])
-        display(im)
+        img = img.resize([round(img.size[0] * ratio), round(img.size[1] * ratio)])
+        display(img)
