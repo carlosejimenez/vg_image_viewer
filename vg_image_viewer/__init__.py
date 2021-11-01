@@ -1,9 +1,11 @@
 import json
 import random
+from io import BytesIO
 from pathlib import Path
 
 import cv2
 import numpy as np
+import requests
 from IPython.display import display
 from PIL import Image
 
@@ -146,10 +148,15 @@ class NotebookImageViewer:
          scene_graphs: dictionary with id -> scene_graph **or** filepath where such a json dictionary exists.
     """
 
-    def __init__(self, root: str, default_dim: int = 500, scene_graphs: [str, dict] = None):
+    def __init__(self, root: str = None, default_dim: int = 500, scene_graphs: [str, dict] = None):
         # below will throw does not exist error
-        self.root = Path(root).resolve(strict=True)
-        assert self.root.is_dir(), NotADirectoryError('The passed root %s is not a directory.' % self.root)
+        if root is None:
+            self.root = r'https://tdnvzntrf.s3.us-east-2.amazonaws.com/images/'
+            self.use_url = True
+        else:
+            self.root = Path(root).resolve(strict=True)
+            self.use_url = False
+            assert self.root.is_dir(), NotADirectoryError('The passed root %s is not a directory.' % self.root)
         self.default_dim = default_dim
         assert default_dim > 0, ValueError('default_dim must be positive!')
         self.scene_graphs = scene_graphs if type(scene_graphs) is dict else json.load(open(scene_graphs))
@@ -172,8 +179,11 @@ class NotebookImageViewer:
             ext: extension to use for value, so file reads {root}/{value}{ext}. '.jpg' by default.
             with_bboxes: if scene_graphs contains value, will generate image with bounding boxes.
         """
-        img_filename = Path(self.root.as_posix(), str(value) + ext).as_posix()
-        img = Image.open(img_filename)
+        if self.use_url:
+            img = Image.open(BytesIO(requests.get(self.root + f'{str(value)}{ext}', stream=True).content))
+        else:
+            img_filename = Path(self.root.as_posix(), str(value) + ext).as_posix()
+            img = Image.open(img_filename)
         init_scale = 600
         ratio = init_scale / max(img.size[0], img.size[1])
         img = img.resize([round(img.size[0] * ratio), round(img.size[1] * ratio)])
