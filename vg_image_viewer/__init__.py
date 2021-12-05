@@ -184,7 +184,7 @@ class ImageViewer:
         img = self.get_image(value, ext, with_bboxes)
         display(img)
 
-    def get_image(self, value: [str, int], ext: str = '.jpg', with_bboxes: bool = False):
+    def get_image(self, value: [str, int], ext: str = '.jpg', with_bboxes: bool = False, normalize_dim=-1):
         r"""Displays image with name value in root directory.
 
         Args:
@@ -198,7 +198,16 @@ class ImageViewer:
             img_filename = Path(self.root.as_posix(), str(value) + ext).as_posix()
             img = Image.open(img_filename)
         init_scale = 600
-        ratio = init_scale / max(img.size[0], img.size[1])
+        ratio = init_scale
+        if normalize_dim == -1:
+            ratio /= max(img.size[0], img.size[1])
+        elif normalize_dim == 0:
+            ratio /= img.size[0]
+        elif normalize_dim == 1:
+            ratio /= img.size[1]
+        else:
+            raise ValueError('Received normalize_dim: (%s), expected [int]: -1 (max(width, height)), ' + \
+                '0 (width), or 1 (hight).' % normalize_dim)
         img = img.resize([round(img.size[0] * ratio), round(img.size[1] * ratio)])
         if with_bboxes:
             if self.scene_graphs is None:
@@ -207,8 +216,8 @@ class ImageViewer:
                 objects = self.scene_graphs[str(value)]['objects'].values()
                 labels, bboxes = zip(*list(map(lambda x: self._extract_label_and_bbox(x, ratio), objects)))
                 img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
-                img = add_multiple_labels(img, labels, bboxes, draw_bg=True, text_bg_color=(255, 255, 255), thickness=2,
-                                        is_opaque=False, alpha=0.1, top=False)
+                img = add_multiple_labels(img, labels, bboxes, draw_bg=True, text_bg_color=(255, 255, 255), 
+                                          thickness=2, is_opaque=False, alpha=0.1, top=False)
                 img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
         ratio = self.default_dim / init_scale
         img = img.resize([round(img.size[0] * ratio), round(img.size[1] * ratio)])
