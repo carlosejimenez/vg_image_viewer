@@ -1,4 +1,5 @@
 import json
+import logging
 import random
 from io import BytesIO
 from pathlib import Path
@@ -135,6 +136,83 @@ def add_multiple_labels(img: np.ndarray,
         img = add_label(img, label, bbox, draw_bg, text_bg_color, color, top)
 
     return img
+
+
+class ImageViewer:
+    r"""Can be used to display images (using an id as filename from supplied the root directory) in jupyter notebooks
+     and lab.
+
+     Args:
+         root: root directory where images should be placed by default.
+         default_dim: by default images will be normalized to fit within the size default_dim x default_dim before
+            displaying.
+         scene_graphs: dictionary with id -> scene_graph **or** filepath where such a json dictionary exists.
+    """
+
+    def __init__(self, root: str = None, default_dim: int = 500, scene_graphs: [str, dict] = None):
+        # below will throw does not exist error
+        if root is None:
+            self.root = r'https://tdnvzntrf.s3.us-east-2.amazonaws.com/images/'
+            self.use_url = True
+        else:
+            self.root = Path(root).resolve(strict=True)
+            self.use_url = False
+            assert self.root.is_dir(), NotADirectoryError('The passed root %s is not a directory.' % self.root)
+        self.default_dim = default_dim
+        assert default_dim > 0, ValueError('default_dim must be positive!')
+        if scene_graphs is not None:
+            self.scene_graphs = scene_graphs if type(scene_graphs) is dict else json.load(open(scene_graphs))
+        else:
+            self.scene_graphs = None
+
+    @staticmethod
+    def _extract_label_and_bbox(entry: dict, ratio) -> tuple:
+        r"""Converts bbox entry to (name, (x, y, x+w, y+h)) for adding to the image.
+
+        Args:
+            entry: object entry from scene graph.
+        """
+        return str(entry['name']), tuple(map(lambda x: int(round(x * ratio)),
+                                             (entry['x'], entry['y'], entry['x']+entry['w'], entry['y']+entry['h'])))
+    
+    def display(self, img: [np.ndarray, Image]):
+        if isinstance(img, np.ndarray):
+            img = Image.fromarray(img)
+        display(img)
+    
+    def show_image(self, value: [str, int], ext: str = '.jpg', with_bboxes: bool = False):
+        img = self.get_image(value, ext, with_bboxes)
+        display(img)
+
+    def get_image(self, value: [str, int], ext: str = '.jpg', with_bboxes: bool = False):
+        r"""Displays image with name value in root directory.
+
+        Args:
+            value: name of file in root directory (without extension).
+            ext: extension to use for value, so file reads {root}/{value}{ext}. '.jpg' by default.
+            with_bboxes: if scene_graphs contains value, will generate image with bounding boxes.
+        """
+        if self.use_url:
+            img = Image.open(BytesIO(requests.get(self.root + f'{str(value)}{ext}', stream=True).content))
+        else:
+            img_filename = Path(self.root.as_posix(), str(value) + ext).as_posix()
+            img = Image.open(img_filename)
+        init_scale = 600
+        ratio = init_scale / max(img.size[0], img.size[1])
+        img = img.resize([round(img.size[0] * ratio), round(img.size[1] * ratio)])
+        if with_bboxes:
+            if self.scene_graphs is None:
+                logging.warn('Passed with_bboxes as True, but scene_graphs unitialized.')
+            else:
+                objects = self.scene_graphs[str(value)]['objects'].values()
+                labels, bboxes = zip(*list(map(lambda x: self._extract_label_and_bbox(x, ratio), objects)))
+                img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+                img = add_multiple_labels(img, labels, bboxes, draw_bg=True, text_bg_color=(255, 255, 255), thickness=2,
+                                        is_opaque=False, alpha=0.1, top=False)
+                img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+        ratio = self.default_dim / init_scale
+        img = img.resize([round(img.size[0] * ratio), round(img.size[1] * ratio)])
+        return img
 
 
 class NotebookImageViewer:
